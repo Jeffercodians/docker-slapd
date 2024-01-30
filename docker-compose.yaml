@@ -1,0 +1,35 @@
+version: "3.4"
+
+services:
+  debian:
+    image: docker.smithery.dev/slapd:${OPENLDAP_VERSION}-debain-${DEBIAN_VERSION}
+    build:
+      context: .
+      target: debian
+      args:
+        OPENLDAP_VERSION: "${OPENLDAP_VERSION}"
+        DEBIAN_VERSION: "${DEBIAN_VERSION}"
+        SLAPD_LDAP_PORT: "${SLAPD_LDAP_PORT}"
+        SLAPD_LDAPS_PORT: "${SLAPD_LDAPS_PORT}"
+    # environment:
+    #   SLAPD_USER: "${SLAPD_USER}"
+    #   SLAPD_GROUP: "${SLAPD_GROUP}"
+    #   SLAPD_HOST: "0.0.0.0"
+    #   SLAPD_LDAP_PORT: ${SLAPD_LDAP_PORT}
+    #   SLAPD_LDAP_PORT_ENABLED: true
+    #   SLAPD_LDAPS_PORT: ${SLAPD_LDAPS_PORT}
+    #   SLAPD_LDAPS_PORT_ENABLED: true
+    #   SLAPD_LDAP_SUFFIX: "dc=my-domain,dc=com"
+    #   SLAPD_CONFIG_DIR: /config
+    #   SLAPD_DATA_DIR: /data
+    #   SLAPD_RUN_DIR: /run/slapd
+    ports:
+      - ${SLAPD_LDAP_PORT}/tcp # LDAP
+      - ${SLAPD_LDAPS_PORT}/tcp # LDAP/TLS
+    volumes:
+      - slapd-config:/config
+      - ldap-data:/data
+
+volumes:
+  slapd-config:
+  ldap-data:
