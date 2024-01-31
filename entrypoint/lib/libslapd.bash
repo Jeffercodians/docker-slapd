@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
 
-error() {
-    echo "ERROR: ${1}"
-    exit "${2:-"1"}"
-}
+set -ueo pipefail
 
 slapd.bin() {
-    local slapd="${SLAPD_INSTALL_DIR}/libexec/slapd"
+    local slapd="${SLAPD_INSTALL_DIR-}/libexec/slapd"
 
     [ -e "${slapd}" ] &&
     echo "${slapd}"
+}
+
+slapd.lib_path() {
+    local slapd_libs="${SLAPD_INSTALL_DIR-}/lib"
+
+    [ -d "${slapd_libs}" ] &&
+    echo "${slapd_libs}"
 }
 
 slapd.copy_builtin_schema() {
@@ -82,43 +86,3 @@ slapd.ldaps_uri() {
         echo "ldaps://${SLAPD_HOST}:${SLAPD_LDAPS_PORT}"
     fi
 }
-
-run_slapd() {
-    local -a slapd_flags=()
-    local slapd
-    slapd="$(slapd.bin)"    || error "Could not find slapd"
-    slapd.ensure_data_dir   || error "Could not configure the data directory"
-    slapd.ensure_run_dir    || error "Could not configure the run directory"
-    slapd.ensure_config_dir || error "Could not configure the config directory"
-
-    # Force slapd to run in the foreground by setting debug mode.
-    #   Note: (-d)ebug 32768 results in logging messages at the configured
-    #       log level
-    #   For further reading See running slapd:
-    #       https://www.openldap.org/doc/admin24/runningslapd.html
-    slapd_flags+=(-d 32768)
-
-    # Set the User/UID and Group/GID for the running slapd process to give
-    #   the runner of the container full control over how the data is stored
-    slapd_flags+=(-u "${SLAPD_USER}" -g "${SLAPD_GROUP}")
-
-    # Use a slapd config file even though it is not recommended to give the
-    #   dockerized context more idempotency.
-    # Note: Dynamic configs can still be loaded via ldif files, but on each
-    #   start the main slapd.conf file will be respected
-    slapd_flags+=(-f "$(slapd.config_file)") || \
-        error "Could not generate initial configuration file"
-
-    # Only expose the endpoints as configurd in the environment variables
-    #   to give the runner of the container full control over how the slapd
-    #   server listens on the network
-    slapd_flags+=(-h "$(slapd.ldap_uri) $(slapd.ldaps_uri)") || \
-        error "Could not identify enpoint URIs"
-
-    echo "Begin slapd (OpenLDAP Daemon):"
-
-    # Running slapd with exec passes interrupts directly to slapd
-    exec "${slapd}" "${slapd_flags[@]}"
-}
-
-run_slapd

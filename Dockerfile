@@ -5,8 +5,12 @@ ARG DEBIAN_VERSION=12.4-slim
 #
 FROM debian:${DEBIAN_VERSION} as slapd_builder
 
-ARG OPENLDAP_VERSION=2.6.6 \
+ARG INSTALL_BASE_DIR="/opt" \
+    BUILD_BASE_DIR="/build" \
+    OPENLDAP_VERSION=2.6.6 \
     OPENLDAP_MIRROR="https://www.openldap.org/software/download/OpenLDAP/openldap-release/"
+
+WORKDIR "${BUILD_BASE_DIR}"
 
 RUN apt update && apt install -y \
         build-essential \
@@ -16,13 +20,11 @@ RUN apt update && apt install -y \
         libssl-dev \
         libwrap0-dev
 
-WORKDIR /build
-
 RUN curl -sL -O "${OPENLDAP_MIRROR}/openldap-${OPENLDAP_VERSION}.tgz" && \
     tar -xvzf "./openldap-${OPENLDAP_VERSION}.tgz" --strip-components 1
 
 RUN ./configure \
-        --prefix=/opt \
+        --prefix="${INSTALL_BASE_DIR}" \
         --enable-overlays \
         --enable-ldap \
         --enable-meta \
@@ -46,7 +48,25 @@ RUN make
 RUN make test
 
 RUN make install && \
-    cp COPYRIGHT LICENSE /opt
+    cp COPYRIGHT LICENSE "${INSTALL_BASE_DIR}"
+
+#
+# Entrypoint Script
+#
+FROM debian:${DEBIAN_VERSION} as entrypoint_builder
+
+ARG INSTALL_BASE_DIR="/opt" \
+    BUILD_BASE_DIR="/build"
+
+WORKDIR "${BUILD_BASE_DIR}"
+
+RUN apt update && apt install -y make bats
+
+COPY entrypoint/ "${BUILD_BASE_DIR}"
+
+RUN make test
+
+RUN make install INSTALL_PREFIX="${INSTALL_BASE_DIR}"
 
 #
 # Debian Backed Runtime
@@ -60,7 +80,7 @@ RUN apt update && apt install -y \
         gettext-base && \
     rm -rf /var/lib/apt/* /var/cache/apt/*
 
-ARG SLAPD_INSTALL_DIR=/opt/openldap \
+ARG INSTALL_BASE_DIR="/opt" \
     SLAPD_LDAP_PORT=389 \
     SLAPD_LDAPS_PORT=686 \
     SLAPD_USER=openldap \
@@ -77,18 +97,15 @@ ENV SLAPD_USER="${SLAPD_USER}" \
     SLAPD_CONFIG_DIR=/config \
     SLAPD_DATA_DIR=/data \
     SLAPD_RUN_DIR=/run/slapd \
-    SLAPD_INSTALL_DIR="${SLAPD_INSTALL_DIR}" \
-    SLAPD_CONFIG_INSTALL_DIR=/run/slapd \
-    SLAPD_INSTALL_DIR="${SLAPD_INSTALL_DIR}" \
-    SLAPD_CONFIG_INSTALL_DIR="${SLAPD_INSTALL_DIR}/etc/slapd_container" \
-    PATH="${PATH}:${SLAPD_INSTALL_DIR}/bin" \
-    LD_LIBRARY_PATH="${LD_LIBRAY_PATH}:${SLAPD_INSTALL_DIR}/lib"
+    SLAPD_INSTALL_DIR="${INSTALL_BASE_DIR}/openldap" \
+    SLAPD_ENTRYPOINT_INSTALL_DIR="${INSTALL_BASE_DIR}/entrypoint" \
+    SLAPD_CONFIG_INSTALL_DIR="${SLAPD_ENTRYPOINT_INSTALL_DIR}/config"
 
-COPY --from=slapd_builder /opt "${SLAPD_INSTALL_DIR}"
-COPY src/config "${SLAPD_CONFIG_INSTALL_DIR}"
-COPY src/bash/slapd_entrypoint.bash /entrypoint.bash
+COPY --from=slapd_builder "${INSTALL_BASE_DIR}" "${SLAPD_INSTALL_DIR}"
+COPY --from=entrypoint_builder "${INSTALL_BASE_DIR}" "${SLAPD_ENTRYPOINT_INSTALL_DIR}"
 
-RUN groupadd --system "${SLAPD_GROUP}" && \
+RUN ln -P "${SLAPD_ENTRYPOINT_INSTALL_DIR}/bin/entrypoint.bash" "/entrypoint" && \
+    groupadd --system "${SLAPD_GROUP}" && \
     useradd --system --gid "${SLAPD_GROUP}" --no-create-home "${SLAPD_USER}"
 
 EXPOSE ${SLAPD_LDAP_PORT}/tcp \
@@ -96,4 +113,4 @@ EXPOSE ${SLAPD_LDAP_PORT}/tcp \
 
 VOLUME "${SLAPD_CONFIG_DIR}" "${SLAPD_DATA_DIR}"
 
-ENTRYPOINT [ "/entrypoint.bash" ]
+ENTRYPOINT [ "/entrypoint" ]

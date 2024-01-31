@@ -1,7 +1,7 @@
 version: "3.4"
 
 services:
-  debian:
+  slapd:
     image: docker.smithery.dev/slapd:${OPENLDAP_VERSION}-debain-${DEBIAN_VERSION}
     build:
       context: .

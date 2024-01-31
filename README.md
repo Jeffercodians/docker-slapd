@@ -1,4 +1,4 @@
-# OpenLDAP `slapd` Docker Image
+# slapd Docker
 
 Provides an unofficial docker image for [OpenLDAP](https://www.openldap.org/)'s slapd LDAP directory server built from the sources provided by the OpenLDAP project.  The image aims to "dockerize" the LDAP administration process, common configurations can be set entirely from the environment.
 
@@ -53,6 +53,10 @@ Volume Name | Default Mount | Purpose
 config      | /config       | Store slapd's configurations and schemas
 data        | /data         | Store database files.  Multiple databases will require subdirectories
 
+## Entrypoint
+
+See the [Entrypoint](./entrypoint/README.md) subdirectory for details.
+
 # Building
 
 Build with Docker Compose:
@@ -67,10 +71,10 @@ Build with Docker:
 
 ## Build Structure
 
-Component           | Toolchain      | Purpose
---------------------|----------------|-----------------
-.env                | Many           | Store default environment variable values for this version of code
-Dockerfile          | Docker         | Defines how to build the docker image, including how to build OpenLDAP/slapd from source
-docker-compose.yaml | Docker+Compose | Defines the arguments and context to build and run the slapd image
-src/bash            | BASH           | Bash script component to pack into the image, oriented around the slapd_entrypoint.bash entrypoint script.
-src/config          | LDAP, LDIF     | Configurations for the slapd service, including schemas, and LDap Interchange Format files for populating the database
+Component           | Toolchain        | Purpose
+--------------------|------------------|-----------------
+.env                | Many             | Store default environment variable values for this version of code
+Dockerfile          | Docker           | Defines how to build the docker image, including how to build OpenLDAP/slapd from source
+docker-compose.yaml | Docker+Compose   | Defines the arguments and context to build and run the slapd image
+entrypoint/         | Make, BASH, BATS | Subproject to provide entrypoint scripts to pack into the image.
+config/             | Config, LDIF     | Configurations for the slapd service, including schemas, and LDap Interchange Format files for populating the database
