@@ -60,7 +60,7 @@ ARG INSTALL_BASE_DIR="/opt" \
 
 WORKDIR "${BUILD_BASE_DIR}"
 
-RUN apt update && apt install -y make bats
+RUN apt update && apt install -y make bats gettext-base
 
 COPY entrypoint/ "${BUILD_BASE_DIR}"
 

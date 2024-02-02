@@ -2,8 +2,7 @@
 
 set -ueo pipefail
 
-ENTRYPOINT_ROOT="${SLAPD_ENTRYPOINT_INSTALL_DIR:-"$(cd "$(dirname "${0}")/.." && pwd)"}"
-
+ENTRYPOINT_ROOT="${SLAPD_ENTRYPOINT_INSTALL_DIR:-"$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"}"
 source "${ENTRYPOINT_ROOT}/lib/libslapd.bash"
 
 error() {
@@ -13,11 +12,15 @@ error() {
 
 run_slapd() {
     local -a slapd_flags=()
+
     local slapd
-    slapd="$(slapd.bin)"    || error "Could not find slapd"
-    slapd.ensure_data_dir   || error "Could not configure the data directory"
-    slapd.ensure_run_dir    || error "Could not configure the run directory"
-    slapd.ensure_config_dir || error "Could not configure the config directory"
+    slapd="$(slapd.bin)" || error "Could not find slapd"
+
+    slapd.ensure_dir "${SLAPD_DATA_DIR}" || \
+        error "Could not configure the data directory"
+
+    slapd.ensure_dir "${SLAPD_RUN_DIR}"  || \
+        error "Could not configure the run directory"
 
     # Ensure the ldap libraries from the install can be loaded
     export LD_LIBRARY_PATH
