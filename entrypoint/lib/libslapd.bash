@@ -48,7 +48,6 @@ slapd.config_file() {
     local config_file="${SLAPD_CONFIG_DIR}/slapd.conf"
 
     slapd.ensure_dir "${SLAPD_CONFIG_DIR}" &&
-    { [ -f "${config_file}" ] ||
-        slapd_config.generate "${config_file}"; } &&
+    slapd_config.generate "${config_file}" &&
     echo "${config_file}"
 }

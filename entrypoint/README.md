@@ -27,3 +27,4 @@ Ensure `bats` and `make` are available on the build machine.  To run all tests:
 ```bash
 > make test
 ```
+

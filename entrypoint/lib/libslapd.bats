@@ -6,6 +6,12 @@ source "${BATS_TEST_DIRNAME}/libslapd.bash"
 
 setup() {
     [ -n "${BATS_TEST_TMPDIR-}" ] || BATS_TEST_TMPDIR="$(mktemp -d)"
+
+    SLAPD_USER="${UID}"
+    SLAPD_GROUP="${GROUPS[0]}"
+
+    SLAPD_CONFIG_DIR="${BATS_TEST_TMPDIR}"
+    SLAPD_INSTALL_DIR="${BATS_TEST_TMPDIR}"
 }
 
 teardown() {
@@ -18,7 +24,6 @@ teardown() {
 #
 
 @test "slapd.bin: prints the path to slapd" {
-    SLAPD_INSTALL_DIR="${BATS_TEST_TMPDIR}"
     local slapd_bin="${SLAPD_INSTALL_DIR}/libexec/slapd"
 
     mkdir -p "$(dirname "${slapd_bin}")"
@@ -44,7 +49,6 @@ teardown() {
 #
 
 @test "slapd.lib_path: prints the path to openldap installed libraries" {
-    SLAPD_INSTALL_DIR="${BATS_TEST_TMPDIR}"
     local slapd_libs_dir="${SLAPD_INSTALL_DIR}/lib"
 
     mkdir -p "${slapd_libs_dir}"
@@ -158,9 +162,6 @@ teardown() {
 #
 
 @test "slapd.ensure_dir: makes a directory only accessible by SLAPD_USER:SLAPD_GROUP" {
-    SLAPD_USER="${UID}"
-    SLAPD_GROUP="${GROUPS[0]}"
-
     local dir="${BATS_TEST_TMPDIR}/test_dir"
 
     run slapd.ensure_dir "${dir}"
@@ -169,4 +170,34 @@ teardown() {
     [ "$(stat -c "%a" "${dir}")" = "700" ]
     [ "$(stat -c "%u" "${dir}")" = "${SLAPD_USER}" ]
     [ "$(stat -c "%g" "${dir}")" = "${SLAPD_GROUP}" ]
+}
+
+#
+# Test Suite
+#   slapd.config_file: generate the slapd config file
+#
+
+GENERATED_CONFIG="generated_config"
+slapd_config.generate() {
+    echo "${GENERATED_CONFIG}" > "${1}"
+}
+
+@test "slapd.config_file: should print the config file location" {
+    run slapd.config_file
+
+    [ "${output}" = "${SLAPD_CONFIG_DIR}/slapd.conf" ]
+}
+
+@test "slapd.config_file: should generate a config file when not present" {
+    run slapd.config_file
+
+    [ "$(cat ${output})" = "${GENERATED_CONFIG}" ]
+}
+
+@test "slapd.config_file: should replace an existing config file" {
+    touch "${SLAPD_CONFIG_DIR}/slapd.conf"
+
+    run slapd.config_file
+
+    [ "$(cat ${output})" = "${GENERATED_CONFIG}" ]
 }

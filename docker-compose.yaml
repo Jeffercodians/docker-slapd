@@ -29,7 +29,13 @@ services:
     volumes:
       - slapd-config:/config
       - ldap-data:/data
+    secrets:
+      - root_dn_pw
 
 volumes:
   slapd-config:
   ldap-data:
+
+secrets:
+  root_dn_pw:
+    file: ./.root_dn_pw

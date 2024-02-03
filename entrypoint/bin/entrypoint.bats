@@ -25,13 +25,6 @@ EOF
     echo "${RANDOM}" > "${SLAPD_SCHEMA_DIR}/core.schema"
 }
 
-setup_slapd_config() {
-    export SLAPD_CONFIG_INSTALL_DIR="${SLAPD_INSTALL_DIR}/config"
-    mkdir -p "${SLAPD_CONFIG_INSTALL_DIR}"
-    cp "${BATS_TEST_DIRNAME}/../config/slapd.conf.tpl" \
-        "${SLAPD_CONFIG_INSTALL_DIR}/slapd.conf.tpl"
-}
-
 setup() {
     [ -n "${BATS_TEST_TMPDIR-}" ] || BATS_TEST_TMPDIR="$(mktemp -d)"
 
@@ -48,7 +41,6 @@ setup() {
     export SLAPD_LDAP_SUFFIX="dc=example, dc=com"
 
     setup_slapd_install
-    setup_slapd_config
 }
 
 teardown() {
